@@ -91,7 +91,7 @@ describe("EventPipeline", () => {
     pipeline.ingest([e1, e2]);
     const events = pipeline.events();
     
-    const req = events[0]!.payload as any;
+    const req = events[0]!.payload as Record<string, unknown>;
     expect(req.url).toContain("token=%5BREDACTED%5D");
     expect(req.url).toContain("query=search");
     // Body and headers are stripped by the NetworkRequest Zod schema anyway,
@@ -99,7 +99,7 @@ describe("EventPipeline", () => {
     expect(req.body).toBeUndefined();
     expect(req.headers).toBeUndefined();
 
-    const input = events[1]!.payload as any;
+    const input = events[1]!.payload as Record<string, unknown>;
     expect(input.text).toBe("[REDACTED]");
     expect(input.redacted).toBe(true);
   });

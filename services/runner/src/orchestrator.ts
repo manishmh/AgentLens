@@ -1,7 +1,6 @@
 import {
   EventSource,
   EventType,
-  parseRunManifest,
   type EvaluationResult,
   type RunManifest,
   type Task,
@@ -18,7 +17,7 @@ import {
   newRunId,
   newSessionId,
 } from "@agentlens/shared";
-import { artifactRefsFromEvents, buildArtifactIndex, persistRun } from "./persist";
+import { buildArtifactIndex, persistRun } from "./persist";
 
 export interface RunConfig {
   organizationId: string;
@@ -108,7 +107,6 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
 
   let executionStatus: string = ExecutionStatus.Success;
   let failureCategory: string | undefined;
-  let result: { ok: boolean; finalAnswer?: string } = { ok: false };
   let collected: CollectedArtifact[] = [];
 
   try {
@@ -124,7 +122,6 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
       config.sandboxSpec?.limits?.wallClockTimeoutMs,
       (err) => abortController.abort(err),
     );
-    result = { ok: execResult.ok, finalAnswer: execResult.finalAnswer };
     if (!execResult.ok) {
       executionStatus = ExecutionStatus.Failed;
       failureCategory = execResult.failureCategory ?? FailureCategory.Agent;
@@ -149,30 +146,8 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
     collected = [];
   }
 
-  // Evaluate over the observed events (independent of execution).
-  let evaluation: EvaluationResult | undefined;
-  if (config.evaluator) {
-    try {
-      evaluation = await config.evaluator.evaluate({
-        task: config.task,
-        events: observation.events(),
-        result,
-        target: config.target ?? config.task.target,
-        competitors: config.competitors,
-      });
-      observation.record({
-        source: EventSource.Evaluator,
-        type: EventType.EvaluationCompleted,
-        payload: { evaluator: evaluation.evaluator, metrics: evaluation.metrics },
-      });
-    } catch {
-      evaluation = undefined;
-    }
-  }
-
   const observationSummary = observation.summary();
   const durationMs = performance.now() - startedMs;
-  const evaluationStatus = evaluation ? evaluation.status : "skipped";
 
   observation.record({
     source: EventSource.Run,
@@ -180,7 +155,8 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
     payload: {
       executionStatus,
       observationStatus: observationSummary.status,
-      evaluationStatus,
+      // evaluationStatus is determined later
+      evaluationStatus: "skipped",
       durationMs,
     },
   });
@@ -191,7 +167,6 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
   // Pipeline ensures validation, redaction, and chronological ordering.
   pipeline.ingest(observation.events());
   
-  const events = pipeline.events();
   // Combine artifact metadata from events with the physical collected buffers
   const artifacts = buildArtifactIndex(Array.from(pipeline.artifacts()), collected);
 
@@ -212,7 +187,7 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
       status: runStatus,
       executionStatus,
       observationStatus: observationSummary.status,
-      evaluationStatus,
+      evaluationStatus: "skipped", // placeholder
       failureCategory,
       visibility: "customer_sensitive",
     },
@@ -227,6 +202,7 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
       locale: Intl.DateTimeFormat().resolvedOptions().locale,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       networkPolicy: JSON.stringify(config.sandboxSpec?.network ?? { mode: "internet" }),
+      experimentConfig: config.competitors ? { competitors: config.competitors } : undefined,
     },
     agent: {
       agentId,
@@ -238,9 +214,26 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
     browser: undefined,
     observation: observationSummary,
     artifacts,
-    evaluation,
     findings: [],
   });
+
+  // Evaluate over the fully reconstructed RunManifest
+  let evaluation: EvaluationResult | undefined;
+  if (config.evaluator) {
+    try {
+      evaluation = await config.evaluator.evaluate({
+        run: manifest,
+        task: config.task,
+        successCriteria: config.task.successCriteria,
+      });
+      manifest.evaluation = evaluation;
+      manifest.metadata.evaluationStatus = evaluation.status;
+      // We do not inject an EvaluationCompleted event into the already reconstructed 
+      // manifest events array, as that would bypass pipeline validation.
+    } catch {
+      manifest.metadata.evaluationStatus = "failed";
+    }
+  }
 
   const outputDir = await persistRun(outputRoot, manifest, collected);
   return { manifest, outputDir };

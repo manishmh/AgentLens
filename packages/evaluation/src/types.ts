@@ -1,4 +1,4 @@
-import type { CanonicalEvent, EvaluationResult, Task } from "@agentlens/event-schema";
+import type { EvaluationResult, RunManifest, Task } from "@agentlens/event-schema";
 
 /**
  * Evaluation is independent from execution (docs/03 §25): evaluators consume the
@@ -7,13 +7,10 @@ import type { CanonicalEvent, EvaluationResult, Task } from "@agentlens/event-sc
  * prioritization (docs/10 §18) is layered on later and is not part of V1 Milestone 0.
  */
 export interface EvaluationInput {
+  run: RunManifest;
   task: Task;
-  events: readonly CanonicalEvent[];
-  result: { ok: boolean; finalAnswer?: string };
-  /** The customer's site/domain, for discovery & recommendation checks. */
-  target?: string;
-  /** Competitor domains to detect in the agent's behavior and answer. */
-  competitors?: string[];
+  /** Natural language success criteria or strict evaluation goals. */
+  successCriteria?: string;
 }
 
 export interface Evaluator {

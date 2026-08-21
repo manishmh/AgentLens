@@ -54,7 +54,6 @@ describe("synthetic run pipeline (Milestone 0 end-to-end)", () => {
         "network.response",
         "page.snapshot",
         "screenshot",
-        "evaluation.completed",
         "run.finished",
       ]) {
         expect(types).toContain(expected);
