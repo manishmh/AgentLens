@@ -76,6 +76,10 @@ describe("synthetic run pipeline (Milestone 0 end-to-end)", () => {
       expect(manifest.evaluation?.metrics.customer_recommended).toBe(true);
       expect(manifest.evaluation?.metrics.competitor_recommended).toBe(false);
       expect(manifest.evaluation?.metrics.task_success).toBe(true);
+
+      // Deterministic findings. (None expected for a completely successful run).
+      expect(manifest.findings).toBeDefined();
+      expect(manifest.findings).toHaveLength(0);
     } finally {
       await rm(out, { recursive: true, force: true });
     }

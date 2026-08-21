@@ -9,6 +9,7 @@ import { ObservationEngine, EventPipeline } from "@agentlens/observation";
 import type { CollectedArtifact, SandboxProvider, SandboxSpec } from "@agentlens/sandbox";
 import type { AgentRuntime } from "@agentlens/agent-runtime";
 import type { Evaluator } from "@agentlens/evaluation";
+import { RuleFindingGenerator } from "@agentlens/evaluation";
 import {
   ExecutionStatus,
   FailureCategory,
@@ -234,6 +235,9 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
       manifest.metadata.evaluationStatus = "failed";
     }
   }
+
+  const findingGen = new RuleFindingGenerator();
+  manifest.findings = findingGen.generate(manifest);
 
   const outputDir = await persistRun(outputRoot, manifest, collected);
   return { manifest, outputDir };
