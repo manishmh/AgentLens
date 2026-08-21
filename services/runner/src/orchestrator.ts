@@ -6,7 +6,7 @@ import {
   type RunManifest,
   type Task,
 } from "@agentlens/event-schema";
-import { ObservationEngine } from "@agentlens/observation";
+import { ObservationEngine, EventPipeline } from "@agentlens/observation";
 import type { CollectedArtifact, SandboxProvider, SandboxSpec } from "@agentlens/sandbox";
 import type { AgentRuntime } from "@agentlens/agent-runtime";
 import type { Evaluator } from "@agentlens/evaluation";
@@ -187,13 +187,18 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
 
   await sandbox.destroy().catch(() => undefined);
 
-  const events = observation.events();
-  const artifacts = buildArtifactIndex(artifactRefsFromEvents(events), collected);
+  const pipeline = new EventPipeline();
+  // Pipeline ensures validation, redaction, and chronological ordering.
+  pipeline.ingest(observation.events());
+  
+  const events = pipeline.events();
+  // Combine artifact metadata from events with the physical collected buffers
+  const artifacts = buildArtifactIndex(Array.from(pipeline.artifacts()), collected);
 
   const runStatus =
     executionStatus === ExecutionStatus.Success ? RunStatus.Completed : RunStatus.Failed;
 
-  const manifest = parseRunManifest({
+  const manifest = pipeline.reconstruct({
     schemaVersion: "1",
     metadata: {
       runId,
@@ -230,8 +235,8 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
       model: meta.model,
       version: meta.version,
     },
+    browser: undefined,
     observation: observationSummary,
-    events,
     artifacts,
     evaluation,
     findings: [],
