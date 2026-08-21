@@ -1,0 +1,19 @@
+{
+  "name": "@agentlens/browser",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@agentlens/event-schema": "workspace:^",
+    "@agentlens/observation": "workspace:^",
+    "@agentlens/sandbox": "workspace:^",
+    "@agentlens/shared": "workspace:^",
+    "playwright": "^1.62.1"
+  }
+}

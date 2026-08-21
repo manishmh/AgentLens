@@ -1,0 +1,36 @@
+# Local development dependencies for the AgentLens control plane.
+# These back the control plane (Postgres), job queue (Redis), and object store (MinIO/S3).
+# They are provisioned here for Milestone 0 but are NOT wired into application code yet —
+# Milestone 0 persists runs to the local filesystem (run.json). See docs/10-v1-implementation-plan.md.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: agentlens
+      POSTGRES_PASSWORD: agentlens
+      POSTGRES_DB: agentlens
+    ports:
+      - "5432:5432"
+    volumes:
+      - agentlens-postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: agentlens
+      MINIO_ROOT_PASSWORD: agentlens
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - agentlens-minio:/data
+
+volumes:
+  agentlens-postgres:
+  agentlens-minio:

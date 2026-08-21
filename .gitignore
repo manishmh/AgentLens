@@ -1,1 +1,34 @@
-docs
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local run output (run.json, screenshots/, artifacts/)
+.artifacts/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+AGENTS.md
+CLAUDE.md
+PROGRESS.md
+progress.md
+.claude/
+
+# Test output
+playwright-report/
+test-results/
+.eslintcache
+
+# Build outputs
+.turbo/
+build/
+out/
