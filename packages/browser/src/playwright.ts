@@ -214,6 +214,10 @@ export class PlaywrightBrowserSession implements BrowserSession {
     return this.page.url();
   }
 
+  async evaluate<T = unknown>(script: string): Promise<T> {
+    return this.page.evaluate(script);
+  }
+
   async close(): Promise<void> {
     try {
       await this.context.close();

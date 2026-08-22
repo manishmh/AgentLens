@@ -16,6 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "runner:demo": "tsx services/runner/src/demo.ts",
+    "runner:readiness": "tsx services/runner/src/demo-readiness.ts",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test"
   },
   "devDependencies": {

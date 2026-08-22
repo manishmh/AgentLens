@@ -1,7 +1,6 @@
 {
-  "name": "@agentlens/runner",
+  "name": "@agentlens/readiness",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
   "exports": {
     ".": {
@@ -9,14 +8,14 @@
       "default": "./src/index.ts"
     }
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
   "dependencies": {
-    "@agentlens/agent-runtime": "workspace:*",
-    "@agentlens/browser": "workspace:*",
-    "@agentlens/evaluation": "workspace:*",
     "@agentlens/event-schema": "workspace:*",
-    "@agentlens/observation": "workspace:*",
+    "@agentlens/browser": "workspace:*",
     "@agentlens/sandbox": "workspace:*",
-    "@agentlens/readiness": "workspace:*",
     "@agentlens/shared": "workspace:*"
   }
 }

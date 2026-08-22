@@ -111,6 +111,21 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
+  packages/readiness:
+    dependencies:
+      '@agentlens/browser':
+        specifier: workspace:*
+        version: link:../browser
+      '@agentlens/event-schema':
+        specifier: workspace:*
+        version: link:../event-schema
+      '@agentlens/sandbox':
+        specifier: workspace:*
+        version: link:../sandbox
+      '@agentlens/shared':
+        specifier: workspace:*
+        version: link:../shared
+
   packages/sandbox:
     dependencies:
       '@vercel/sandbox':
@@ -128,6 +143,9 @@ importers:
       '@agentlens/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
+      '@agentlens/browser':
+        specifier: workspace:*
+        version: link:../../packages/browser
       '@agentlens/evaluation':
         specifier: workspace:*
         version: link:../../packages/evaluation
@@ -137,6 +155,9 @@ importers:
       '@agentlens/observation':
         specifier: workspace:*
         version: link:../../packages/observation
+      '@agentlens/readiness':
+        specifier: workspace:*
+        version: link:../../packages/readiness
       '@agentlens/sandbox':
         specifier: workspace:*
         version: link:../../packages/sandbox

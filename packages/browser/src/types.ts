@@ -37,6 +37,7 @@ export interface BrowserSession {
   /** Current DOM/HTML content, for page/DOM snapshots (docs/07 §40–41). */
   content(): Promise<string>;
   url(): string;
+  evaluate<T = unknown>(script: string): Promise<T>;
   close(): Promise<void>;
 }
 
