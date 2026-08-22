@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  createEvent,
-  EventSource,
-  EventType,
-  safeParseCanonicalEvent,
-} from "./index";
+import { createEvent, EventSource, EventType, safeParseCanonicalEvent } from "./index";
 
 const ctx = { organizationId: "org_1", projectId: "proj_1", runId: "run_1" };
 

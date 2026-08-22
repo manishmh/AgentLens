@@ -29,20 +29,38 @@ describe("EventPipeline", () => {
 
   it("rejects malformed events", () => {
     const pipeline = new EventPipeline();
-    pipeline.ingest([
-      { invalid: "event" },
-      { schemaVersion: "1", type: "non-existent-type" },
-    ]);
+    pipeline.ingest([{ invalid: "event" }, { schemaVersion: "1", type: "non-existent-type" }]);
     expect(pipeline.events()).toHaveLength(0);
     expect(pipeline.rejected()).toHaveLength(2);
   });
 
   it("maintains chronological ordering regardless of ingest order", () => {
     const pipeline = new EventPipeline();
-    
-    const e1 = createEvent({ ...baseContext, sequence: 1, runtimeMs: 10, source: EventSource.Browser, type: EventType.BrowserStarted, payload: { browser: "chrome", version: "100" } });
-    const e2 = createEvent({ ...baseContext, sequence: 2, runtimeMs: 20, source: EventSource.Browser, type: EventType.BrowserNavigation, payload: { url: "about:blank" } });
-    const e3 = createEvent({ ...baseContext, sequence: 3, runtimeMs: 30, source: EventSource.Browser, type: EventType.BrowserClick, payload: { selector: "button" } });
+
+    const e1 = createEvent({
+      ...baseContext,
+      sequence: 1,
+      runtimeMs: 10,
+      source: EventSource.Browser,
+      type: EventType.BrowserStarted,
+      payload: { browser: "chrome", version: "100" },
+    });
+    const e2 = createEvent({
+      ...baseContext,
+      sequence: 2,
+      runtimeMs: 20,
+      source: EventSource.Browser,
+      type: EventType.BrowserNavigation,
+      payload: { url: "about:blank" },
+    });
+    const e3 = createEvent({
+      ...baseContext,
+      sequence: 3,
+      runtimeMs: 30,
+      source: EventSource.Browser,
+      type: EventType.BrowserClick,
+      payload: { selector: "button" },
+    });
 
     // Ingest out of order
     pipeline.ingest([e3, e1]);
@@ -57,7 +75,7 @@ describe("EventPipeline", () => {
 
   it("redacts sensitive data from payloads and urls", () => {
     const pipeline = new EventPipeline();
-    
+
     const e1 = createEvent({
       ...baseContext,
       sequence: 1,
@@ -69,10 +87,10 @@ describe("EventPipeline", () => {
         method: "GET",
         body: "sensitive body",
         headers: {
-          "Authorization": "Bearer secret",
-          "Accept": "application/json"
-        }
-      }
+          Authorization: "Bearer secret",
+          Accept: "application/json",
+        },
+      },
     });
 
     const e2 = createEvent({
@@ -84,13 +102,13 @@ describe("EventPipeline", () => {
       payload: {
         selector: "#password",
         text: "my-password",
-        redacted: false
-      }
+        redacted: false,
+      },
     });
 
     pipeline.ingest([e1, e2]);
     const events = pipeline.events();
-    
+
     const req = events[0]!.payload as Record<string, unknown>;
     expect(req.url).toContain("token=%5BREDACTED%5D");
     expect(req.url).toContain("query=search");
@@ -106,7 +124,7 @@ describe("EventPipeline", () => {
 
   it("extracts artifacts from events", () => {
     const pipeline = new EventPipeline();
-    
+
     const e1 = createEvent({
       ...baseContext,
       sequence: 1,
@@ -120,9 +138,9 @@ describe("EventPipeline", () => {
           path: "screenshots/art-1.png",
           contentType: "image/png",
           sizeBytes: 1000,
-          visibility: "internal"
-        }
-      }
+          visibility: "internal",
+        },
+      },
     });
 
     pipeline.ingest([e1]);

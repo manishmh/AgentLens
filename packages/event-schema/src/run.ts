@@ -81,8 +81,11 @@ export const evaluationResultSchema = z.object({
   evaluatorVersion: z.string().default("1"),
   evaluatedAt: z.string().datetime(),
   status: z.enum(["complete", "complete_with_limitations", "skipped", "failed"]),
-  /** Named metrics (e.g. task_success, customer_recommended). Values are booleans/numbers/strings. */
-  metrics: z.record(z.string(), z.union([z.boolean(), z.number(), z.string(), z.null()])),
+  /** Named metrics (e.g. task_success, customer_recommended). Values are booleans/numbers/strings/arrays. */
+  metrics: z.record(
+    z.string(),
+    z.union([z.boolean(), z.number(), z.string(), z.null(), z.array(z.string())]),
+  ),
 });
 export type EvaluationResult = z.infer<typeof evaluationResultSchema>;
 

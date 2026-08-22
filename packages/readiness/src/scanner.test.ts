@@ -37,7 +37,7 @@ describe("ReadinessScanner", () => {
     return new Promise<void>((resolve) => {
       server = createServer((req, res) => {
         const url = new URL(req.url || "/", `http://${req.headers.host}`);
-        
+
         if (url.pathname === "/llms.txt") {
           res.writeHead(200, { "Content-Type": "text/plain" });
           res.end("mock llms");
@@ -84,7 +84,9 @@ describe("ReadinessScanner", () => {
             res.end("# Hello");
           } else {
             res.writeHead(200, { "Content-Type": "text/html" });
-            res.end("<html><head><title>Test</title><meta name=\"description\" content=\"Test\"></head><body><main><h1>Test</h1><script type=\"application/ld+json\">{}</script></main></body></html>");
+            res.end(
+              '<html><head><title>Test</title><meta name="description" content="Test"></head><body><main><h1>Test</h1><script type="application/ld+json">{}</script></main></body></html>',
+            );
           }
           return;
         }
@@ -110,7 +112,7 @@ describe("ReadinessScanner", () => {
     const scanner = new ReadinessScanner();
     const report = await scanner.scan({
       targetUrl,
-      browserProvider: new MockBrowserProvider()
+      browserProvider: new MockBrowserProvider(),
     });
 
     // Should match schema
@@ -119,7 +121,7 @@ describe("ReadinessScanner", () => {
     expect(report.targetUrl).toBe(targetUrl);
     expect(report.checks.length).toBeGreaterThan(0);
 
-    const getStatus = (name: string) => report.checks.find(c => c.name === name)?.status;
+    const getStatus = (name: string) => report.checks.find((c) => c.name === name)?.status;
 
     // llms.txt (exists)
     expect(getStatus("/llms.txt detection")).toBe("pass");
@@ -154,7 +156,7 @@ describe("ReadinessScanner", () => {
     });
 
     readinessReportSchema.parse(report);
-    expect(report.checks.every(c => c.status === "fail" || c.status === "unknown")).toBe(true);
+    expect(report.checks.every((c) => c.status === "fail" || c.status === "unknown")).toBe(true);
   });
 
   it("is deterministic on repeated scans", async () => {

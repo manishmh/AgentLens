@@ -1,7 +1,7 @@
-import { 
-  type ReadinessCheck, 
+import {
+  type ReadinessCheck,
   type ReadinessReport,
-  type ReadinessEvidence
+  type ReadinessEvidence,
 } from "@agentlens/event-schema";
 import type { BrowserProvider } from "@agentlens/browser";
 // Let's use crypto.randomUUID()
@@ -24,7 +24,7 @@ export class ReadinessScanner {
       name: string,
       category: "readable" | "discoverable" | "callable" | "secure",
       path: string,
-      expectedContentType?: string
+      expectedContentType?: string,
     ): Promise<ReadinessCheck> => {
       const url = `${baseUrl}${path}`;
       const evidence: ReadinessEvidence[] = [];
@@ -38,11 +38,14 @@ export class ReadinessScanner {
           httpStatus: response.status,
           headers: {
             "content-type": response.headers.get("content-type") || "",
-          }
+          },
         });
 
         if (response.ok) {
-          if (expectedContentType && !response.headers.get("content-type")?.includes(expectedContentType)) {
+          if (
+            expectedContentType &&
+            !response.headers.get("content-type")?.includes(expectedContentType)
+          ) {
             reason = `Endpoint returned 200 but content type was not ${expectedContentType}.`;
             status = "fail";
           } else {
@@ -74,45 +77,92 @@ export class ReadinessScanner {
     checks.push(await checkEndpoint("llms-txt", "/llms.txt detection", "readable", "/llms.txt"));
 
     // 2. robots.txt (DISCOVERABLE)
-    checks.push(await checkEndpoint("robots-txt", "/robots.txt detection", "discoverable", "/robots.txt"));
+    checks.push(
+      await checkEndpoint("robots-txt", "/robots.txt detection", "discoverable", "/robots.txt"),
+    );
 
     // 3. sitemap.xml (DISCOVERABLE)
-    checks.push(await checkEndpoint("sitemap-xml", "/sitemap.xml detection", "discoverable", "/sitemap.xml", "xml"));
+    checks.push(
+      await checkEndpoint(
+        "sitemap-xml",
+        "/sitemap.xml detection",
+        "discoverable",
+        "/sitemap.xml",
+        "xml",
+      ),
+    );
 
     // 4. API Catalog (CALLABLE)
-    checks.push(await checkEndpoint("api-catalog", "API Catalog detection", "callable", "/.well-known/api-catalog"));
+    checks.push(
+      await checkEndpoint(
+        "api-catalog",
+        "API Catalog detection",
+        "callable",
+        "/.well-known/api-catalog",
+      ),
+    );
 
     // 5. OAuth Discovery (SECURE)
-    checks.push(await checkEndpoint("oauth-discovery", "OAuth Discovery detection", "secure", "/.well-known/oauth-authorization-server"));
+    checks.push(
+      await checkEndpoint(
+        "oauth-discovery",
+        "OAuth Discovery detection",
+        "secure",
+        "/.well-known/oauth-authorization-server",
+      ),
+    );
 
     // 6. Agent Skills (CALLABLE)
-    checks.push(await checkEndpoint("agent-skills", "Agent Skills detection", "callable", "/.well-known/agent-skills/index.json"));
+    checks.push(
+      await checkEndpoint(
+        "agent-skills",
+        "Agent Skills detection",
+        "callable",
+        "/.well-known/agent-skills/index.json",
+      ),
+    );
 
     // 7. MCP Discovery (DISCOVERABLE)
-    checks.push(await checkEndpoint("mcp-discovery", "MCP Discovery detection", "discoverable", "/.well-known/mcp"));
+    checks.push(
+      await checkEndpoint(
+        "mcp-discovery",
+        "MCP Discovery detection",
+        "discoverable",
+        "/.well-known/mcp",
+      ),
+    );
 
     // 8. Web Bot Authentication (SECURE)
-    checks.push(await checkEndpoint("web-bot-auth", "Web Bot Authentication detection", "secure", "/.well-known/web-bot-authentication"));
+    checks.push(
+      await checkEndpoint(
+        "web-bot-auth",
+        "Web Bot Authentication detection",
+        "secure",
+        "/.well-known/web-bot-authentication",
+      ),
+    );
 
     // 9. HTML Accessibility & Structured Data (READABLE)
     try {
-      const htmlRes = await fetch(options.targetUrl, { headers: { "Accept": "text/html" } });
-      const evidence = [{
-        url: options.targetUrl,
-        httpStatus: htmlRes.status,
-        headers: { "content-type": htmlRes.headers.get("content-type") || "" }
-      }];
-      
+      const htmlRes = await fetch(options.targetUrl, { headers: { Accept: "text/html" } });
+      const evidence = [
+        {
+          url: options.targetUrl,
+          httpStatus: htmlRes.status,
+          headers: { "content-type": htmlRes.headers.get("content-type") || "" },
+        },
+      ];
+
       if (htmlRes.ok && htmlRes.headers.get("content-type")?.includes("html")) {
         const body = await htmlRes.text();
         const lowerBody = body.toLowerCase();
-        
+
         const hasTitle = lowerBody.includes("<title");
-        const hasDesc = lowerBody.includes("name=\"description\"");
+        const hasDesc = lowerBody.includes('name="description"');
         const hasMain = lowerBody.includes("<main");
         const hasH1 = lowerBody.includes("<h1");
         const htmlScore = [hasTitle, hasDesc, hasMain, hasH1].filter(Boolean).length;
-        
+
         checks.push({
           checkId: `chk_${crypto.randomUUID()}`,
           name: "HTML Accessibility",
@@ -121,13 +171,13 @@ export class ReadinessScanner {
           severity: "medium",
           observedAt: new Date().toISOString(),
           evidence,
-          reason: `Found components: title=${hasTitle}, description=${hasDesc}, main=${hasMain}, h1=${hasH1}`
+          reason: `Found components: title=${hasTitle}, description=${hasDesc}, main=${hasMain}, h1=${hasH1}`,
         });
 
         const hasJsonLd = lowerBody.includes("application/ld+json");
-        const hasOg = lowerBody.includes("property=\"og:");
+        const hasOg = lowerBody.includes('property="og:');
         const sdScore = [hasJsonLd, hasOg].filter(Boolean).length;
-        
+
         checks.push({
           checkId: `chk_${crypto.randomUUID()}`,
           name: "Structured Data",
@@ -136,7 +186,7 @@ export class ReadinessScanner {
           severity: "low",
           observedAt: new Date().toISOString(),
           evidence,
-          reason: `Found: json-ld=${hasJsonLd}, opengraph=${hasOg}`
+          reason: `Found: json-ld=${hasJsonLd}, opengraph=${hasOg}`,
         });
       } else {
         checks.push({
@@ -147,7 +197,7 @@ export class ReadinessScanner {
           severity: "medium",
           observedAt: new Date().toISOString(),
           evidence,
-          reason: "Failed to fetch HTML or content-type is not text/html."
+          reason: "Failed to fetch HTML or content-type is not text/html.",
         });
         checks.push({
           checkId: `chk_${crypto.randomUUID()}`,
@@ -157,7 +207,7 @@ export class ReadinessScanner {
           severity: "low",
           observedAt: new Date().toISOString(),
           evidence,
-          reason: "Failed to fetch HTML or content-type is not text/html."
+          reason: "Failed to fetch HTML or content-type is not text/html.",
         });
       }
     } catch (err) {
@@ -171,7 +221,7 @@ export class ReadinessScanner {
         severity: "medium",
         observedAt: new Date().toISOString(),
         evidence,
-        reason
+        reason,
       });
       checks.push({
         checkId: `chk_${crypto.randomUUID()}`,
@@ -181,17 +231,17 @@ export class ReadinessScanner {
         severity: "low",
         observedAt: new Date().toISOString(),
         evidence,
-        reason
+        reason,
       });
     }
 
     // 10. Markdown Content Negotiation (READABLE)
     try {
-      const mdRes = await fetch(options.targetUrl, { headers: { "Accept": "text/markdown" } });
-      
+      const mdRes = await fetch(options.targetUrl, { headers: { Accept: "text/markdown" } });
+
       let mdStatus: "pass" | "fail" = "fail";
       let mdReason = "Server did not return text/markdown content.";
-      
+
       const isMd = mdRes.headers.get("content-type")?.includes("markdown");
       if (isMd && mdRes.ok) {
         mdStatus = "pass";
@@ -211,10 +261,10 @@ export class ReadinessScanner {
             httpStatus: mdRes.status,
             headers: {
               "content-type": mdRes.headers.get("content-type") || "",
-            }
-          }
+            },
+          },
         ],
-        reason: mdReason
+        reason: mdReason,
       });
     } catch (err) {
       checks.push({
@@ -225,7 +275,7 @@ export class ReadinessScanner {
         severity: "medium",
         observedAt: new Date().toISOString(),
         evidence: [{ url: options.targetUrl }],
-        reason: `Network error: ${err instanceof Error ? err.message : String(err)}`
+        reason: `Network error: ${err instanceof Error ? err.message : String(err)}`,
       });
     }
 
@@ -239,7 +289,9 @@ export class ReadinessScanner {
         const session = await options.browserProvider.launch({ headless: true });
         try {
           await session.navigate(options.targetUrl);
-          const hasModelContext = await session.evaluate<boolean>("typeof document.modelContext !== 'undefined'");
+          const hasModelContext = await session.evaluate<boolean>(
+            "typeof document.modelContext !== 'undefined'",
+          );
           if (hasModelContext) {
             webMcpStatus = "pass";
             webMcpReason = "document.modelContext object was detected.";
@@ -260,7 +312,7 @@ export class ReadinessScanner {
         severity: webMcpStatus === "pass" ? "info" : "low",
         observedAt: new Date().toISOString(),
         evidence,
-        reason: webMcpReason
+        reason: webMcpReason,
       });
     }
 

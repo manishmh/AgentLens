@@ -6,7 +6,7 @@ import { findingSchema, EventType, EventSource } from "@agentlens/event-schema";
 function buildRun(
   events: Record<string, unknown>[] = [],
   metrics: Record<string, unknown> | undefined = undefined,
-  overrides: Partial<RunManifest> = {}
+  overrides: Partial<RunManifest> = {},
 ): RunManifest {
   return {
     schemaVersion: "1",
@@ -54,13 +54,15 @@ function buildRun(
     })),
     artifacts: [],
     findings: [],
-    evaluation: metrics ? {
-      evaluator: "test",
-      evaluatorVersion: "1",
-      evaluatedAt: new Date().toISOString(),
-      status: "complete",
-      metrics,
-    } : undefined,
+    evaluation: metrics
+      ? {
+          evaluator: "test",
+          evaluatorVersion: "1",
+          evaluatedAt: new Date().toISOString(),
+          status: "complete",
+          metrics,
+        }
+      : undefined,
     ...overrides,
   } as unknown as RunManifest;
 }
@@ -80,7 +82,7 @@ describe("RuleFindingGenerator", () => {
           source: EventSource.Agent,
           type: EventType.AgentFinished,
           payload: { ok: true, finalAnswer: "All good" },
-        }
+        },
       ],
       {
         task_success: true,
@@ -89,7 +91,7 @@ describe("RuleFindingGenerator", () => {
         competitor_recommended: false,
         required_information_found: true,
         interaction_success: true,
-      }
+      },
     );
 
     const findings = generator.generate(run);
@@ -113,7 +115,7 @@ describe("RuleFindingGenerator", () => {
       ],
       {
         interaction_success: false,
-      }
+      },
     );
     const findings = generator.generate(run);
     expect(findings).toHaveLength(1);
@@ -137,17 +139,17 @@ describe("RuleFindingGenerator", () => {
       {
         task_success: false,
         required_information_found: false,
-      }
+      },
     );
     const findings = generator.generate(run);
     expect(findings).toHaveLength(2);
-    
-    const fInfo = findings.find(f => f.observation.includes("specific information"));
+
+    const fInfo = findings.find((f) => f.observation.includes("specific information"));
     expect(fInfo).toBeDefined();
     findingSchema.parse(fInfo);
     expect(fInfo!.evidence[0]!.eventId).toBe("evt-0");
 
-    const fTask = findings.find(f => f.observation.includes("overall task"));
+    const fTask = findings.find((f) => f.observation.includes("overall task"));
     expect(fTask).toBeDefined();
     findingSchema.parse(fTask);
     expect(fTask!.evidence[0]!.eventId).toBe("evt-0");
@@ -164,7 +166,7 @@ describe("RuleFindingGenerator", () => {
       ],
       {
         customer_discovered: false,
-      }
+      },
     );
     const findings = generator.generate(run);
     expect(findings).toHaveLength(1);
@@ -195,14 +197,14 @@ describe("RuleFindingGenerator", () => {
       {
         customer_discovered: true,
         customer_recommended: false,
-      }
+      },
     );
     const findings = generator.generate(run);
     expect(findings).toHaveLength(1);
     const f = findings[0]!;
     expect(f.category).toBe("Recommendation");
     expect(f.evidence).toHaveLength(3); // The two discovery events + final answer
-    expect(f.evidence.map(e => e.eventId)).toEqual(["evt-0", "evt-1", "evt-2"]);
+    expect(f.evidence.map((e) => e.eventId)).toEqual(["evt-0", "evt-1", "evt-2"]);
     findingSchema.parse(f);
   });
 
@@ -217,12 +219,12 @@ describe("RuleFindingGenerator", () => {
       ],
       {
         competitor_recommended: true,
-      }
+      },
     );
     const findings = generator.generate(run);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.category).toBe("Recommendation");
-    expect(findings[0]!.observation).toContain("recommended a competitor");
+    expect(findings[0]!.observation).toContain("recommended competitor(s)");
     findingSchema.parse(findings[0]);
   });
 
@@ -237,16 +239,17 @@ describe("RuleFindingGenerator", () => {
       ],
       {
         interaction_success: false,
-      }
+      },
     );
     const findings1 = generator.generate(run);
     const findings2 = generator.generate(run);
 
     // findingId is generated newly each time, so omit it for deep equality
-    const clean = (arr: Finding[]) => arr.map(f => {
-      const { findingId: _, ...rest } = f;
-      return rest;
-    });
+    const clean = (arr: Finding[]) =>
+      arr.map((f) => {
+        const { findingId: _, ...rest } = f;
+        return rest;
+      });
 
     expect(clean(findings1)).toEqual(clean(findings2));
   });

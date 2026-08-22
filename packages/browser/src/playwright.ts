@@ -1,4 +1,10 @@
-import { chromium, type Browser, type BrowserContext, type Page, type CDPSession } from "playwright";
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type CDPSession,
+} from "playwright";
 import type { ObservationEngine } from "@agentlens/observation";
 import type { SandboxHandle } from "@agentlens/sandbox";
 import { EventSource, EventType } from "@agentlens/event-schema";
@@ -19,7 +25,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
     private readonly browser: Browser,
     private readonly cdp: CDPSession,
     private readonly observation: ObservationEngine,
-    private readonly sandbox: SandboxHandle
+    private readonly sandbox: SandboxHandle,
   ) {
     this.setupNetworkObservation();
     this.setupPageObservation();
@@ -28,7 +34,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
   private setupNetworkObservation() {
     this.cdp.on("Network.requestWillBeSent", (event) => {
       this.requestMap.set(event.requestId, { timestamp: event.timestamp, url: event.request.url });
-      
+
       this.observation.record({
         source: EventSource.Network,
         type: EventType.NetworkRequest,
@@ -39,10 +45,11 @@ export class PlaywrightBrowserSession implements BrowserSession {
           resourceType: event.type,
         },
       });
-      
+
       if (event.redirectResponse) {
         const reqInfo = this.requestMap.get(event.requestId);
-        const durationMs = (event.timestamp - (reqInfo ? reqInfo.timestamp : event.timestamp)) * 1000;
+        const durationMs =
+          (event.timestamp - (reqInfo ? reqInfo.timestamp : event.timestamp)) * 1000;
         this.observation.record({
           source: EventSource.Network,
           type: EventType.NetworkResponse,
@@ -55,14 +62,17 @@ export class PlaywrightBrowserSession implements BrowserSession {
           },
         });
         // Update timestamp for the new request
-        this.requestMap.set(event.requestId, { timestamp: event.timestamp, url: event.request.url });
+        this.requestMap.set(event.requestId, {
+          timestamp: event.timestamp,
+          url: event.request.url,
+        });
       }
     });
 
     this.cdp.on("Network.responseReceived", (event) => {
       const reqInfo = this.requestMap.get(event.requestId);
       const durationMs = reqInfo ? (event.timestamp - reqInfo.timestamp) * 1000 : undefined;
-      
+
       this.observation.record({
         source: EventSource.Network,
         type: EventType.NetworkResponse,
@@ -80,7 +90,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
       const reqInfo = this.requestMap.get(event.requestId);
       const durationMs = reqInfo ? (event.timestamp - reqInfo.timestamp) * 1000 : undefined;
       const url = reqInfo ? reqInfo.url : this.page.url();
-      
+
       // Emit a 0 status to indicate failure (aborted, blocked, network error)
       this.observation.record({
         source: EventSource.Network,
@@ -94,7 +104,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
       });
       this.requestMap.delete(event.requestId);
     });
-    
+
     this.cdp.on("Network.loadingFinished", (event) => {
       this.requestMap.delete(event.requestId);
     });
@@ -108,7 +118,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
         payload: { message: err.message },
       });
     });
-    
+
     this.page.on("framenavigated", (frame) => {
       if (frame === this.page.mainFrame()) {
         this.observation.record({
@@ -128,7 +138,9 @@ export class PlaywrightBrowserSession implements BrowserSession {
       this.observation.record({
         source: EventSource.Browser,
         type: EventType.BrowserError,
-        payload: { message: `Navigation failed: ${err instanceof Error ? err.message : String(err)}` },
+        payload: {
+          message: `Navigation failed: ${err instanceof Error ? err.message : String(err)}`,
+        },
       });
       throw err;
     }
@@ -164,10 +176,10 @@ export class PlaywrightBrowserSession implements BrowserSession {
   async screenshot(options?: ScreenshotOptions): Promise<Uint8Array> {
     const buffer = await this.page.screenshot({ fullPage: options?.fullPage });
     const u8 = new Uint8Array(buffer);
-    
+
     const screenshotPath = `screenshots/${newArtifactId()}.png`;
     await this.sandbox.writeFile(screenshotPath, u8);
-    
+
     this.observation.record({
       source: EventSource.Browser,
       type: EventType.Screenshot,
@@ -182,7 +194,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
         },
       },
     });
-    
+
     return u8;
   }
 
@@ -190,7 +202,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
     const html = await this.page.content();
     const snapshotPath = `artifacts/snapshot-${newArtifactId()}.html`;
     await this.sandbox.writeFile(snapshotPath, html);
-    
+
     this.observation.record({
       source: EventSource.Browser,
       type: EventType.PageSnapshot,
@@ -206,7 +218,7 @@ export class PlaywrightBrowserSession implements BrowserSession {
         },
       },
     });
-    
+
     return html;
   }
 
@@ -234,7 +246,7 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
 
   constructor(
     private readonly observation: ObservationEngine,
-    private readonly sandbox: SandboxHandle
+    private readonly sandbox: SandboxHandle,
   ) {}
 
   async launch(spec?: BrowserLaunchSpec): Promise<BrowserSession> {
@@ -248,7 +260,7 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
       const browser = await chromium.launch({
         headless: spec?.headless ?? true,
       });
-      
+
       try {
         const context = await browser.newContext({
           viewport: spec?.viewport,
@@ -256,13 +268,20 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
           locale: spec?.locale,
           timezoneId: spec?.timezone,
         });
-        
+
         const page = await context.newPage();
-        
+
         const cdp = await context.newCDPSession(page);
         await cdp.send("Network.enable");
 
-        return new PlaywrightBrowserSession(page, context, browser, cdp, this.observation, this.sandbox);
+        return new PlaywrightBrowserSession(
+          page,
+          context,
+          browser,
+          cdp,
+          this.observation,
+          this.sandbox,
+        );
       } catch (err: unknown) {
         await browser.close().catch(() => {});
         throw err;
@@ -271,7 +290,9 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
       this.observation.record({
         source: EventSource.Browser,
         type: EventType.BrowserError,
-        payload: { message: `Browser launch failed: ${err instanceof Error ? err.message : String(err)}` },
+        payload: {
+          message: `Browser launch failed: ${err instanceof Error ? err.message : String(err)}`,
+        },
       });
       throw err;
     }

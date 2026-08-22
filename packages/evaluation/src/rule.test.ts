@@ -3,7 +3,10 @@ import { RuleEvaluator } from "./rule";
 import type { RunManifest } from "@agentlens/event-schema";
 import { EventType, EventSource } from "@agentlens/event-schema";
 
-function buildRun(events: Record<string, unknown>[] = [], overrides: Partial<RunManifest> = {}): RunManifest {
+function buildRun(
+  events: Record<string, unknown>[] = [],
+  overrides: Partial<RunManifest> = {},
+): RunManifest {
   return {
     schemaVersion: "1",
     metadata: {
@@ -76,9 +79,17 @@ describe("RuleEvaluator", () => {
           payload: { ok: true, finalAnswer: "Customer pricing is $20/mo at customer.com" },
         },
       ],
-      { task: { taskId: "task-1", title: "Find", instruction: "Do", version: "1", target: "https://customer.com" } }
+      {
+        task: {
+          taskId: "task-1",
+          title: "Find",
+          instruction: "Do",
+          version: "1",
+          target: "https://customer.com",
+        },
+      },
     );
-    
+
     const result = await evaluator.evaluate({ run, task: run.task });
     expect(result.metrics.customer_discovered).toBe(true);
     expect(result.metrics.customer_recommended).toBe(true);
@@ -102,9 +113,17 @@ describe("RuleEvaluator", () => {
           payload: { ok: false, finalAnswer: "Couldn't find it" },
         },
       ],
-      { task: { taskId: "1", title: "1", instruction: "1", version: "1", target: "https://customer.com" } }
+      {
+        task: {
+          taskId: "1",
+          title: "1",
+          instruction: "1",
+          version: "1",
+          target: "https://customer.com",
+        },
+      },
     );
-    
+
     const result = await evaluator.evaluate({ run, task: run.task });
     expect(result.metrics.customer_discovered).toBe(true);
     expect(result.metrics.customer_recommended).toBe(false);
@@ -126,9 +145,9 @@ describe("RuleEvaluator", () => {
           taskVersion: "1",
           experimentConfig: { competitors: ["https://competitor.com"] },
         },
-      }
+      },
     );
-    
+
     const result = await evaluator.evaluate({ run, task: run.task });
     expect(result.metrics.competitor_recommended).toBe(true);
   });
@@ -136,7 +155,7 @@ describe("RuleEvaluator", () => {
   it("evaluates missing evidence (empty/incomplete runs)", async () => {
     const run = buildRun([]);
     const result = await evaluator.evaluate({ run, task: run.task });
-    
+
     expect(result.metrics.customer_discovered).toBe(false);
     expect(result.metrics.customer_recommended).toBe(false);
     expect(result.metrics.competitor_recommended).toBe(false);
@@ -161,9 +180,9 @@ describe("RuleEvaluator", () => {
         source: EventSource.Agent,
         type: EventType.AgentFinished,
         payload: { ok: true, finalAnswer: "Done" },
-      }
+      },
     ]);
-    
+
     const result = await evaluator.evaluate({ run, task: run.task });
     // Had a 200 response, but also a BrowserError. Interaction success should be false.
     expect(result.metrics.interaction_success).toBe(false);
@@ -174,26 +193,37 @@ describe("RuleEvaluator", () => {
   });
 
   it("deterministic repeated evaluation of the same RunManifest", async () => {
-    const run = buildRun([
+    const run = buildRun(
+      [
+        {
+          source: EventSource.Network,
+          type: EventType.NetworkResponse,
+          payload: { status: 200 },
+        },
+        {
+          source: EventSource.Agent,
+          type: EventType.AgentFinished,
+          payload: { ok: true, finalAnswer: "Customer pricing is $20/mo at customer.com" },
+        },
+      ],
       {
-        source: EventSource.Network,
-        type: EventType.NetworkResponse,
-        payload: { status: 200 },
+        task: {
+          taskId: "task-1",
+          title: "Find",
+          instruction: "Do",
+          version: "1",
+          target: "https://customer.com",
+        },
       },
-      {
-        source: EventSource.Agent,
-        type: EventType.AgentFinished,
-        payload: { ok: true, finalAnswer: "Customer pricing is $20/mo at customer.com" },
-      },
-    ], { task: { taskId: "task-1", title: "Find", instruction: "Do", version: "1", target: "https://customer.com" } });
-    
+    );
+
     const result1 = await evaluator.evaluate({ run, task: run.task });
     const result2 = await evaluator.evaluate({ run, task: run.task });
-    
+
     // The timestamp evaluatedAt will differ, so we omit it for equality check
     const { evaluatedAt: _t1, ...metrics1 } = result1;
     const { evaluatedAt: _t2, ...metrics2 } = result2;
-    
+
     expect(metrics1).toEqual(metrics2);
   });
 });

@@ -78,9 +78,9 @@ export class EventPipeline {
       const headers = redactedPayload.headers as Record<string, string>;
       const redactedHeaders: Record<string, string> = {};
       const sensitiveHeaderKeys = ["authorization", "cookie", "set-cookie", "x-api-key"];
-      
+
       for (const [key, value] of Object.entries(headers)) {
-        if (sensitiveHeaderKeys.some(k => key.toLowerCase().includes(k))) {
+        if (sensitiveHeaderKeys.some((k) => key.toLowerCase().includes(k))) {
           redactedHeaders[key] = "[REDACTED]";
         } else {
           redactedHeaders[key] = value;
@@ -96,9 +96,9 @@ export class EventPipeline {
     try {
       const url = new URL(urlString);
       const sensitiveParams = ["token", "key", "auth", "password", "secret", "code", "session"];
-      
+
       for (const [key] of url.searchParams.entries()) {
-        if (sensitiveParams.some(p => key.toLowerCase().includes(p))) {
+        if (sensitiveParams.some((p) => key.toLowerCase().includes(p))) {
           url.searchParams.set(key, "[REDACTED]");
         }
       }
@@ -135,9 +135,7 @@ export class EventPipeline {
    * Run Reconstruction (docs/10 §11)
    * Builds the complete chronological run from ingested events.
    */
-  reconstruct(
-    base: Omit<RunManifest, "events">
-  ): RunManifest {
+  reconstruct(base: Omit<RunManifest, "events">): RunManifest {
     return {
       ...base,
       events: [...this._events],

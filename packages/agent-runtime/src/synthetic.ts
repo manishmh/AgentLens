@@ -119,7 +119,13 @@ export class SyntheticAgentRuntime implements AgentRuntime {
     observation.record({
       source: EventSource.Network,
       type: EventType.NetworkResponse,
-      payload: { requestId, url: pricingUrl, status: 200, contentType: "text/html", durationMs: 42 },
+      payload: {
+        requestId,
+        url: pricingUrl,
+        status: 200,
+        contentType: "text/html",
+        durationMs: 42,
+      },
     });
 
     // Evidence artifacts written to the sandbox workspace.

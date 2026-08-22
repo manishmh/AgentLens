@@ -167,7 +167,7 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
   const pipeline = new EventPipeline();
   // Pipeline ensures validation, redaction, and chronological ordering.
   pipeline.ingest(observation.events());
-  
+
   // Combine artifact metadata from events with the physical collected buffers
   const artifacts = buildArtifactIndex(Array.from(pipeline.artifacts()), collected);
 
@@ -229,7 +229,7 @@ export async function executeRun(config: RunConfig): Promise<RunOutcome> {
       });
       manifest.evaluation = evaluation;
       manifest.metadata.evaluationStatus = evaluation.status;
-      // We do not inject an EvaluationCompleted event into the already reconstructed 
+      // We do not inject an EvaluationCompleted event into the already reconstructed
       // manifest events array, as that would bypass pipeline validation.
     } catch {
       manifest.metadata.evaluationStatus = "failed";

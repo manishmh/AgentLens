@@ -7,8 +7,16 @@ const ctx = { organizationId: "o", projectId: "p", runId: "r" };
 describe("ObservationEngine", () => {
   it("assigns increasing sequence numbers and preserves capture order", () => {
     const obs = new ObservationEngine(ctx);
-    obs.record({ source: EventSource.Agent, type: EventType.AgentStarted, payload: { runtime: "x" } });
-    obs.record({ source: EventSource.Search, type: EventType.SearchQuery, payload: { query: "q" } });
+    obs.record({
+      source: EventSource.Agent,
+      type: EventType.AgentStarted,
+      payload: { runtime: "x" },
+    });
+    obs.record({
+      source: EventSource.Search,
+      type: EventType.SearchQuery,
+      payload: { query: "q" },
+    });
 
     const events = obs.events();
     expect(events.map((e) => e.sequence)).toEqual([0, 1]);
@@ -23,7 +31,11 @@ describe("ObservationEngine", () => {
 
   it("drops invalid observations and reports degraded completeness separately", () => {
     const obs = new ObservationEngine(ctx);
-    obs.record({ source: EventSource.Agent, type: EventType.AgentStarted, payload: { runtime: "x" } });
+    obs.record({
+      source: EventSource.Agent,
+      type: EventType.AgentStarted,
+      payload: { runtime: "x" },
+    });
     // Missing required `status` → cannot normalize → dropped.
     obs.record({
       source: EventSource.Network,

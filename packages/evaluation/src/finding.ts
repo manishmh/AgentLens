@@ -14,9 +14,7 @@ export class RuleFindingGenerator {
     const { metrics } = evaluation;
 
     // Helper to find the final answer event
-    const finalAnswerEvent = events.find(
-      (e) => e.type === EventType.AgentFinished
-    );
+    const finalAnswerEvent = events.find((e) => e.type === EventType.AgentFinished);
 
     // Helper to build evidence ref from an event
     const toEvidence = (eventId: string, note?: string): EvidenceRef => ({
@@ -27,7 +25,16 @@ export class RuleFindingGenerator {
 
     // 1. Interaction failure
     if (metrics.interaction_success === false) {
-      const errorEvents = events.filter((e) => e.type === EventType.BrowserError || (e.type === EventType.NetworkResponse && typeof e.payload === "object" && e.payload !== null && "status" in e.payload && typeof e.payload.status === "number" && e.payload.status >= 400));
+      const errorEvents = events.filter(
+        (e) =>
+          e.type === EventType.BrowserError ||
+          (e.type === EventType.NetworkResponse &&
+            typeof e.payload === "object" &&
+            e.payload !== null &&
+            "status" in e.payload &&
+            typeof e.payload.status === "number" &&
+            e.payload.status >= 400),
+      );
       findings.push({
         findingId: newFindingId(),
         runId: metadata.runId,
@@ -42,7 +49,14 @@ export class RuleFindingGenerator {
 
     // 2. Customer not discovered
     if (metrics.customer_discovered === false) {
-      const evidence = finalAnswerEvent ? [toEvidence(finalAnswerEvent.eventId, "Agent final answer indicates failure to find customer")] : [];
+      const evidence = finalAnswerEvent
+        ? [
+            toEvidence(
+              finalAnswerEvent.eventId,
+              "Agent final answer indicates failure to find customer",
+            ),
+          ]
+        : [];
       findings.push({
         findingId: newFindingId(),
         runId: metadata.runId,
@@ -58,16 +72,26 @@ export class RuleFindingGenerator {
     // 3. Customer discovered but not recommended
     if (metrics.customer_discovered === true && metrics.customer_recommended === false) {
       const discoveryEvents = events.filter((e) => {
-        if (e.type === EventType.BrowserNavigation && typeof e.payload === "object" && e.payload !== null && "url" in e.payload && typeof e.payload.url === "string") {
+        if (
+          e.type === EventType.BrowserNavigation &&
+          typeof e.payload === "object" &&
+          e.payload !== null &&
+          "url" in e.payload &&
+          typeof e.payload.url === "string"
+        ) {
           return true; // Weak heuristic for discovering where they went
         }
         if (e.type === EventType.SearchResults) return true;
         return false;
       });
       // Pick the most relevant ones (e.g. up to 2)
-      const evidence = discoveryEvents.slice(-2).map((e) => toEvidence(e.eventId, "Customer discovered here"));
+      const evidence = discoveryEvents
+        .slice(-2)
+        .map((e) => toEvidence(e.eventId, "Customer discovered here"));
       if (finalAnswerEvent) {
-        evidence.push(toEvidence(finalAnswerEvent.eventId, "Final answer did not recommend customer"));
+        evidence.push(
+          toEvidence(finalAnswerEvent.eventId, "Final answer did not recommend customer"),
+        );
       }
 
       findings.push({
@@ -84,22 +108,89 @@ export class RuleFindingGenerator {
 
     // 4. Competitor recommended
     if (metrics.competitor_recommended === true) {
-      const evidence = finalAnswerEvent ? [toEvidence(finalAnswerEvent.eventId, "Agent recommended a competitor in final answer")] : [];
-      findings.push({
-        findingId: newFindingId(),
-        runId: metadata.runId,
-        category: "Recommendation",
-        severity: "high",
-        evidenceClass: "observed",
-        observation: "Agent recommended a competitor over the target customer.",
-        evidence,
-        confidence: "high",
+      const recommendedCompetitors = Array.isArray(metrics.recommended_competitors)
+        ? (metrics.recommended_competitors as string[])
+        : [];
+      const evidence = finalAnswerEvent
+        ? [toEvidence(finalAnswerEvent.eventId, "Agent final answer")]
+        : [];
+
+      if (metrics.customer_recommended === true) {
+        findings.push({
+          findingId: newFindingId(),
+          runId: metadata.runId,
+          category: "Recommendation",
+          severity: "medium",
+          evidenceClass: "observed",
+          observation: `Agent recommended both the target customer and competitor(s): ${recommendedCompetitors.join(", ")}.`,
+          evidence,
+          confidence: "high",
+        });
+      } else {
+        findings.push({
+          findingId: newFindingId(),
+          runId: metadata.runId,
+          category: "Recommendation",
+          severity: "high",
+          evidenceClass: "observed",
+          observation: `Agent recommended competitor(s) over the target customer: ${recommendedCompetitors.join(", ")}.`,
+          evidence,
+          confidence: "high",
+        });
+      }
+    }
+
+    // New: Competitor discovery findings
+    const discoveredCompetitors = Array.isArray(metrics.discovered_competitors)
+      ? (metrics.discovered_competitors as string[])
+      : [];
+    if (discoveredCompetitors.length > 0) {
+      const discoveryEvents = events.filter((e) => {
+        if (
+          e.type === EventType.BrowserNavigation &&
+          typeof e.payload === "object" &&
+          e.payload !== null &&
+          "url" in e.payload &&
+          typeof e.payload.url === "string"
+        )
+          return true;
+        if (e.type === EventType.SearchResults) return true;
+        return false;
       });
+      const evidence = discoveryEvents
+        .slice(-2)
+        .map((e) => toEvidence(e.eventId, "Competitor discovered here"));
+
+      if (metrics.customer_discovered === false) {
+        findings.push({
+          findingId: newFindingId(),
+          runId: metadata.runId,
+          category: "Discovery",
+          severity: "medium",
+          evidenceClass: "observed",
+          observation: `Customer absent but competitor(s) present in discovery: ${discoveredCompetitors.join(", ")}.`,
+          evidence,
+          confidence: "high",
+        });
+      } else {
+        findings.push({
+          findingId: newFindingId(),
+          runId: metadata.runId,
+          category: "Discovery",
+          severity: "info",
+          evidenceClass: "observed",
+          observation: `Customer discovered alongside competitor(s): ${discoveredCompetitors.join(", ")}.`,
+          evidence,
+          confidence: "high",
+        });
+      }
     }
 
     // 5. Required information missing
     if (metrics.required_information_found === false) {
-      const evidence = finalAnswerEvent ? [toEvidence(finalAnswerEvent.eventId, "Agent failed to find required information")] : [];
+      const evidence = finalAnswerEvent
+        ? [toEvidence(finalAnswerEvent.eventId, "Agent failed to find required information")]
+        : [];
       findings.push({
         findingId: newFindingId(),
         runId: metadata.runId,
@@ -115,7 +206,9 @@ export class RuleFindingGenerator {
     // 6. Task failure (catch-all if not covered by above or to emphasize overall failure)
     if (metrics.task_success === false) {
       // Find where agent said it failed or crashed
-      const evidence = finalAnswerEvent ? [toEvidence(finalAnswerEvent.eventId, "Agent reported failure or incomplete task")] : [];
+      const evidence = finalAnswerEvent
+        ? [toEvidence(finalAnswerEvent.eventId, "Agent reported failure or incomplete task")]
+        : [];
       findings.push({
         findingId: newFindingId(),
         runId: metadata.runId,
